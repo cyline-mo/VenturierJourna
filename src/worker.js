@@ -4,6 +4,15 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 // is therefore mandatory and must remain stable after member accounts exist.
 const PASSWORD_ITERATIONS = 100000;
 const encoder = new TextEncoder();
+const ARTICLE_READ_DEDUP_SECONDS = 30 * 60;
+const ARTICLES = Object.freeze({
+  'the-new-farm-to-industry-transfer': '新时代的以农补工：从以农补工到以民补工',
+  'fourth-fiscal-mobilization': '第四次财政总动员：当未来已经被提前使用',
+  'july-2026-financial-data': '2026年7月金融数据：社融没有塌，私人信用需求正在退潮',
+  'money-in-the-bank-consumption-defense': '2026年7月消费数据分析',
+  'hidden-hunger-in-a-depression': '萧条中的隐性饥饿'
+});
+let analyticsSchemaReady = null;
 
 export default {
   async fetch(request, env) {
@@ -16,6 +25,13 @@ export default {
     try {
       if (url.pathname === '/api/health' && request.method === 'GET') {
         return json({ ok: true, service: 'venturier-journal-members' });
+      }
+      if (url.pathname === '/api/analytics/article-view' && request.method === 'POST') {
+        requireSameOrigin(request);
+        return await recordArticleView(request, env);
+      }
+      if (url.pathname === '/api/admin/analytics/articles' && request.method === 'GET') {
+        return await getArticleAnalytics(request, env);
       }
       if (url.pathname === '/api/auth/register' && request.method === 'POST') {
         requireSameOrigin(request);
@@ -47,6 +63,116 @@ class HttpError extends Error {
   constructor(status, message) {
     super(message);
     this.status = status;
+  }
+}
+
+async function recordArticleView(request, env) {
+  const body = await readJson(request);
+  const articleSlug = String(body.articleSlug || '').trim();
+  if (!Object.hasOwn(ARTICLES, articleSlug)) {
+    throw new HttpError(400, '文章编号无效。');
+  }
+
+  await ensureAnalyticsSchema(env.DB);
+  const pepper = requirePasswordPepper(env);
+  const now = unixTime();
+  const viewBucket = Math.floor(now / ARTICLE_READ_DEDUP_SECONDS);
+  const ipAddress = String(request.headers.get('CF-Connecting-IP') || 'unknown');
+  const userAgent = String(request.headers.get('User-Agent') || 'unknown').slice(0, 300);
+  const visitorHash = await sha256Hex(`article-analytics-v1\u0000${pepper}\u0000${ipAddress}\u0000${userAgent}`);
+  const country = normalizeCountry(request.cf?.country);
+  const referrerHost = getReferrerHost(request.headers.get('Referer'));
+
+  const result = await env.DB.prepare(`
+    INSERT OR IGNORE INTO article_views (
+      article_slug, visitor_hash, view_bucket, viewed_at, country, referrer_host
+    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+  `).bind(articleSlug, visitorHash, viewBucket, now, country, referrerHost).run();
+
+  return json({ ok: true, recorded: Number(result.meta?.changes || 0) > 0 }, 202);
+}
+
+async function getArticleAnalytics(request, env) {
+  await requireAdminSession(request, env);
+  await ensureAnalyticsSchema(env.DB);
+  const since = unixTime() - 24 * 60 * 60;
+  const result = await env.DB.prepare(`
+    SELECT
+      article_slug,
+      COUNT(*) AS total_reads,
+      COUNT(DISTINCT visitor_hash) AS unique_readers,
+      SUM(CASE WHEN viewed_at >= ?1 THEN 1 ELSE 0 END) AS reads_24h,
+      MAX(viewed_at) AS last_read_at
+    FROM article_views
+    GROUP BY article_slug
+    ORDER BY total_reads DESC, article_slug ASC
+  `).bind(since).all();
+  const rowsBySlug = new Map((result.results || []).map(row => [row.article_slug, row]));
+  const articles = Object.entries(ARTICLES).map(([articleSlug, title]) => {
+    const row = rowsBySlug.get(articleSlug) || {};
+    return {
+      articleSlug,
+      title,
+      totalReads: Number(row.total_reads || 0),
+      uniqueReaders: Number(row.unique_readers || 0),
+      reads24h: Number(row.reads_24h || 0),
+      lastReadAt: row.last_read_at ? Number(row.last_read_at) : null
+    };
+  }).sort((left, right) => right.totalReads - left.totalReads);
+
+  return json({ ok: true, generatedAt: unixTime(), articles });
+}
+
+async function requireAdminSession(request, env) {
+  const token = parseCookies(request.headers.get('Cookie') || '')[SESSION_COOKIE];
+  if (!token) throw new HttpError(401, '请先登录管理员账号。');
+  const tokenHash = await sha256Hex(token);
+  const user = await env.DB.prepare(`
+    SELECT u.id, u.role, u.status
+    FROM sessions s JOIN users u ON u.id = s.user_id
+    WHERE s.token_hash = ?1 AND s.expires_at > ?2
+  `).bind(tokenHash, unixTime()).first();
+  if (!user || user.status !== 'active') throw new HttpError(401, '管理员登录已失效。');
+  if (user.role !== 'admin') throw new HttpError(403, '当前账号没有管理员权限。');
+  return user;
+}
+
+async function ensureAnalyticsSchema(db) {
+  if (!analyticsSchemaReady) {
+    analyticsSchemaReady = db.batch([
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS article_views (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          article_slug TEXT NOT NULL,
+          visitor_hash TEXT NOT NULL,
+          view_bucket INTEGER NOT NULL,
+          viewed_at INTEGER NOT NULL,
+          country TEXT NOT NULL DEFAULT 'XX',
+          referrer_host TEXT,
+          UNIQUE(article_slug, visitor_hash, view_bucket)
+        ) STRICT
+      `),
+      db.prepare('CREATE INDEX IF NOT EXISTS article_views_slug_time_idx ON article_views(article_slug, viewed_at)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS article_views_time_idx ON article_views(viewed_at)')
+    ]).catch(error => {
+      analyticsSchemaReady = null;
+      throw error;
+    });
+  }
+  return analyticsSchemaReady;
+}
+
+function normalizeCountry(value) {
+  const country = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(country) ? country : 'XX';
+}
+
+function getReferrerHost(value) {
+  if (!value) return null;
+  try {
+    return new URL(value).hostname.slice(0, 253) || null;
+  } catch {
+    return null;
   }
 }
 
