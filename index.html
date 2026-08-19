@@ -1078,7 +1078,7 @@
         <p class="section-note">公共观察向所有人开放：从西非、南非到中国，讨论文化、国家、政府、产业与个人命运之间的财经联系。</p>
       </div>
 
-      <article class="featured-story reveal" data-article-url="articles/july-2026-financial-data.html" tabindex="0" aria-label="阅读公开文章：2026年7月金融数据：社融没有塌，私人信用需求正在退潮">
+      <article class="featured-story reveal" data-article-url="articles/money-in-the-bank-consumption-defense.html" tabindex="0" aria-label="阅读公开文章：2026年7月消费数据分析">
         <div class="featured-story__visual">
           <svg viewBox="0 0 500 360" aria-hidden="true">
             <g fill="none" stroke="currentColor" stroke-width="1.2" opacity=".7">
@@ -1100,12 +1100,12 @@
         </div>
         <div class="featured-story__content">
           <div>
-            <div class="tagline">Public observation · 金融与私人信用</div>
-            <h3>2026年7月金融数据：社融没有塌，私人信用需求正在退潮</h3>
-            <p class="featured-story__summary">社融总量仍在扩张，但政府债券正在取代银行贷款成为主要支撑，居民与企业的私人信用需求持续减弱。</p>
+            <div class="tagline">Public observation · 消费与居民资产负债表</div>
+            <h3>2026年7月消费数据分析</h3>
+            <p class="featured-story__summary">7月消费数据最值得警惕的，不只是社零增速偏低，而是居民越来越不愿意用未来的钱购买今天的东西。</p>
           </div>
           <div class="story-meta">
-            <span>15 分钟阅读</span><span>2026.08.18</span><span>游客可阅读全文</span>
+            <span>18 分钟阅读</span><span>2026.08.19</span><span>游客可阅读全文</span>
           </div>
         </div>
       </article>
@@ -1114,8 +1114,9 @@
         <div class="filters" aria-label="文章分类">
           <button class="filter" type="button" data-filter="all" aria-pressed="true">全部</button>
           <button class="filter" type="button" data-filter="observation" aria-pressed="false">公共观察</button>
+          <button class="filter" type="button" data-filter="thought" aria-pressed="false">个人想法</button>
         </div>
-        <div class="result-count" id="articleCount">3 篇记录</div>
+        <div class="result-count" id="articleCount">5 篇记录</div>
       </div>
 
       <div class="articles-grid" id="articlesGrid"></div>
@@ -1453,6 +1454,18 @@
   <script>
     // 内容区：以后新增文章或项目时，只需复制一项并修改字段。
     const articles = [
+      {
+        id: 'public4', number: 'PUBLIC 04', category: 'observation', categoryLabel: '公共观察', date: '2026.08.19', read: '18 分钟',
+        title: '2026年7月消费数据分析',
+        summary: '7月消费数据最值得警惕的，不只是社零增速偏低，而是居民越来越不愿意用未来的钱购买今天的东西。',
+        tags: ['消费', '资产负债表', '居民预期'], related: [], external: 'articles/money-in-the-bank-consumption-defense.html'
+      },
+      {
+        id: 'thought1', number: 'THOUGHT 01', category: 'thought', categoryLabel: '个人想法', date: '2026.08.19', read: '2 分钟',
+        title: '萧条中的隐性饥饿',
+        summary: '当死亡被拆散进疾病、衰老与个体不幸的统计口径，我们应当如何理解长期贫困造成的隐性饥饿？',
+        tags: ['个人判断', '社会保障', '城市底层'], related: [], external: 'articles/hidden-hunger-in-a-depression.html'
+      },
       {
         id: 'public3', number: 'PUBLIC 03', category: 'observation', categoryLabel: '公共观察', date: '2026.08.18', read: '15 分钟',
         title: '2026年7月金融数据：社融没有塌，私人信用需求正在退潮',
