@@ -1,6 +1,8 @@
 const SESSION_COOKIE = '__Host-vj_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
-const PASSWORD_ITERATIONS = 310000;
+// Cloudflare Workers caps PBKDF2 at 100,000 iterations. A server-only pepper
+// is therefore mandatory and must remain stable after member accounts exist.
+const PASSWORD_ITERATIONS = 100000;
 const encoder = new TextEncoder();
 
 export default {
@@ -68,6 +70,7 @@ async function registerMember(request, env) {
   if (password.length < 12 || password.length > 128) {
     throw new HttpError(400, '密码至少需要 12 个字符。');
   }
+  const pepper = requirePasswordPepper(env);
 
   const rateKey = `register:${await sha256Hex(email)}`;
   if (!(await consumeRateLimit(env.DB, rateKey, 5, 60 * 60))) {
@@ -82,7 +85,7 @@ async function registerMember(request, env) {
   const now = unixTime();
   const userId = crypto.randomUUID();
   const salt = randomHex(16);
-  const passwordHash = await derivePasswordHash(password, salt, PASSWORD_ITERATIONS, env.PASSWORD_PEPPER || '');
+  const passwordHash = await derivePasswordHash(password, salt, PASSWORD_ITERATIONS, pepper);
   const sessionToken = randomToken(32);
   const tokenHash = await sha256Hex(sessionToken);
   const expiresAt = now + SESSION_TTL_SECONDS;
@@ -127,6 +130,7 @@ async function loginMember(request, env) {
   if (!isValidEmail(email) || !password) {
     throw new HttpError(400, '请输入邮箱和密码。');
   }
+  const pepper = requirePasswordPepper(env);
 
   const rateKey = `login:${await sha256Hex(email)}`;
   if (!(await consumeRateLimit(env.DB, rateKey, 10, 15 * 60))) {
@@ -141,7 +145,7 @@ async function loginMember(request, env) {
 
   if (!user) {
     // Perform the expensive operation even when the account does not exist.
-    await derivePasswordHash(password, '00000000000000000000000000000000', PASSWORD_ITERATIONS, env.PASSWORD_PEPPER || '');
+    await derivePasswordHash(password, '00000000000000000000000000000000', PASSWORD_ITERATIONS, pepper);
     throw new HttpError(401, '邮箱或密码不正确。');
   }
 
@@ -149,7 +153,7 @@ async function loginMember(request, env) {
     password,
     user.password_salt,
     user.password_iterations,
-    env.PASSWORD_PEPPER || ''
+    pepper
   );
   if (!constantTimeEqual(candidateHash, user.password_hash)) {
     await writeAudit(env.DB, user.id, 'member_login_failed', { reason: 'password' });
@@ -291,6 +295,14 @@ function normalizeEmail(value) {
 
 function isValidEmail(value) {
   return value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function requirePasswordPepper(env) {
+  const pepper = String(env.PASSWORD_PEPPER || '');
+  if (pepper.length < 32) {
+    throw new HttpError(503, '会员服务正在完成安全配置，请稍后再试。');
+  }
+  return pepper;
 }
 
 function publicUser(user) {
