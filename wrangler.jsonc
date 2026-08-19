@@ -1,8 +1,19 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "venturierjourna",
-  "compatibility_date": "2026-08-18",
+  "compatibility_date": "2026-08-19",
+  "main": "src/worker.js",
   "assets": {
-    "directory": "."
-  }
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "venturier-journal-members",
+      "database_id": "e30d28a5-9abc-4d2a-a0c9-be73c2add791",
+      "migrations_dir": "migrations"
+    }
+  ]
 }

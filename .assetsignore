@@ -1,6 +1,12 @@
 .git
+.git/**
 .github
-.wrangler
+.github/**
+src
+src/**
+migrations
+migrations/**
+wrangler.jsonc
 README.md
 文章添加说明.md
-wrangler.jsonc
+.assetsignore
