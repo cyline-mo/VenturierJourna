@@ -662,15 +662,24 @@
     .auth-card__body { padding: clamp(2rem, 7vw, 4rem); }
     .auth-card h2 { margin: .75rem 0 .8rem; font: 400 clamp(2.8rem, 8vw, 4.5rem)/.92 var(--display); letter-spacing: -.045em; }
     .auth-card__intro { margin: 0 0 2rem; color: var(--muted); font-size: .82rem; }
+    .auth-mode-switch { display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 1.5rem; border: 1px solid var(--line); }
+    .auth-mode-switch[hidden] { display: none; }
+    .auth-mode-switch button { min-height: 42px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: .68rem; font-weight: 650; }
+    .auth-mode-switch button + button { border-left: 1px solid var(--line); }
+    .auth-mode-switch button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
     .auth-field { display: grid; gap: .45rem; margin-bottom: 1rem; }
+    .auth-field[hidden] { display: none; }
     .auth-field label { color: var(--muted); font: 650 .57rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
     .auth-field input { width: 100%; min-height: 50px; padding: .8rem 1rem; border: 1px solid var(--line-strong); outline: 0; background: color-mix(in srgb, var(--paper) 82%, var(--card)); color: var(--ink); }
     .auth-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
+    .auth-honeypot { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; white-space: nowrap !important; }
     .auth-card__actions { display: grid; gap: .75rem; margin-top: 1.5rem; }
     .auth-card__actions .button { width: 100%; }
+    .auth-card__actions .button:disabled { opacity: .58; cursor: wait; transform: none; }
     .auth-apply { padding: .65rem 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: .68rem; }
     .auth-apply:hover { color: var(--accent); }
     .auth-status { min-height: 1.4em; margin-top: .8rem; color: var(--accent); font-size: .67rem; }
+    .auth-status[data-state="success"] { color: var(--moss); }
     .auth-demo-note { margin: 1.5rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .62rem; }
 
     .account-button {
@@ -1136,7 +1145,7 @@
             <div class="access-rule"><span>02</span><div><strong>会员俱乐部</strong><small>使用会员账号与密码验证后进入。</small></div></div>
             <div class="access-rule"><span>03</span><div><strong>管理员账册</strong><small>通过独立管理账号验证后进入。</small></div></div>
           </div>
-          <p class="access-security-note">身份不能在页面内随意切换。正式上线后，会员与管理员权限均由服务器验证。</p>
+          <p class="access-security-note">会员身份由服务器和安全 Cookie 验证；注册成功后即可进入俱乐部。管理员入口将使用独立认证。</p>
           <div class="role-message" id="roleMessage" aria-live="polite"></div>
         </aside>
 
@@ -1391,23 +1400,40 @@
         <div class="tagline" id="authEyebrow">Member verification</div>
         <h2 id="authTitle">会员登录</h2>
         <p class="auth-card__intro" id="authIntro">请输入会员账号与密码，验证后进入俱乐部。</p>
+        <div class="auth-mode-switch" id="authModeSwitch" role="tablist" aria-label="会员账户操作">
+          <button type="button" role="tab" data-auth-mode="login" aria-selected="true">会员登录</button>
+          <button type="button" role="tab" data-auth-mode="register" aria-selected="false">注册会员</button>
+        </div>
         <form id="authForm">
           <input id="authRole" name="role" type="hidden" value="member">
+          <input id="authMode" name="mode" type="hidden" value="login">
+          <div class="auth-field" id="authNameField" hidden>
+            <label for="authName">姓名或称呼</label>
+            <input id="authName" name="displayName" type="text" autocomplete="name" minlength="2" maxlength="60" placeholder="用于会员资料">
+          </div>
           <div class="auth-field">
-            <label for="authAccount" id="authAccountLabel">会员账号</label>
-            <input id="authAccount" name="account" type="text" autocomplete="username" placeholder="账号或邮箱" required>
+            <label for="authAccount" id="authAccountLabel">会员邮箱</label>
+            <input id="authAccount" name="email" type="email" autocomplete="username" maxlength="254" placeholder="name@example.com" required>
           </div>
           <div class="auth-field">
             <label for="authPassword">密码</label>
-            <input id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" required>
+            <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" placeholder="至少 12 个字符" required>
+          </div>
+          <div class="auth-field" id="authConfirmField" hidden>
+            <label for="authPasswordConfirm">确认密码</label>
+            <input id="authPasswordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="再次输入密码">
+          </div>
+          <div class="auth-honeypot" aria-hidden="true">
+            <label for="authWebsite">Website</label>
+            <input id="authWebsite" name="website" type="text" tabindex="-1" autocomplete="off">
           </div>
           <div class="auth-card__actions">
             <button class="button" id="authSubmit" type="submit">进入俱乐部 <span aria-hidden="true">→</span></button>
-            <button class="auth-apply" id="authApply" type="button">还没有账号？申请加入会员</button>
+            <button class="auth-apply" id="authApply" type="button">还没有账号？立即注册会员</button>
           </div>
           <div class="auth-status" id="authStatus" aria-live="polite"></div>
         </form>
-        <p class="auth-demo-note" id="authDemoNote">当前是静态网站演示：填写任意非空账号与密码即可查看界面。正式上线时将连接加密的会员账户系统。</p>
+        <p class="auth-demo-note" id="authDemoNote">密码只以加密摘要保存。注册成功后会立即登录会员俱乐部。</p>
       </div>
     </section>
   </div>
@@ -1478,6 +1504,8 @@
     const authForm = document.getElementById('authForm');
     let authLastFocus = null;
     let authFromEntry = false;
+    let authMode = 'login';
+    let currentUser = null;
     let lastFocus = null;
     let drawerReturnHash = '#journal';
     let currentRole = 'visitor';
@@ -1485,7 +1513,10 @@
     // 正式部署时由服务端实现这些路由；前端永远不保存 GitHub/Gmail 密钥。
     const integrationConfig = Object.freeze({
       articles: '/api/content/articles',
+      memberRegister: '/api/auth/register',
       memberLogin: '/api/auth/member/login',
+      memberSession: '/api/auth/session',
+      memberLogout: '/api/auth/logout',
       adminLogin: '/api/auth/admin/login',
       publish: '/api/admin/github/publish',
       publicPortfolio: '/api/member/portfolio/public',
@@ -1504,20 +1535,68 @@
       setTimeout(() => { entryGate.hidden = true; }, 360);
     }
 
+    function showAuthStatus(message = '', state = 'error') {
+      const status = document.getElementById('authStatus');
+      status.textContent = message;
+      status.dataset.state = state;
+    }
+
+    function setAuthMode(mode = 'login') {
+      const isAdmin = document.getElementById('authRole').value === 'admin';
+      authMode = isAdmin ? 'login' : (mode === 'register' ? 'register' : 'login');
+      document.getElementById('authMode').value = authMode;
+      document.querySelectorAll('[data-auth-mode]').forEach(button => {
+        button.setAttribute('aria-selected', String(button.dataset.authMode === authMode));
+      });
+
+      const registering = authMode === 'register';
+      document.getElementById('authNameField').hidden = !registering;
+      document.getElementById('authConfirmField').hidden = !registering;
+      document.getElementById('authName').required = registering;
+      document.getElementById('authPasswordConfirm').required = registering;
+      document.getElementById('authPassword').autocomplete = registering ? 'new-password' : 'current-password';
+
+      if (isAdmin) {
+        document.getElementById('authTitle').textContent = '管理员登录';
+        document.getElementById('authIntro').textContent = '管理员入口将使用独立认证；当前阶段暂不开放网页管理员登录。';
+        document.getElementById('authSubmit').innerHTML = '管理员入口暂未开放';
+        document.getElementById('authDemoNote').textContent = '为保护私人账册，管理员不能使用普通会员登录接口。';
+      } else if (registering) {
+        document.getElementById('authEyebrow').textContent = 'Member registration';
+        document.getElementById('authTitle').textContent = '注册会员';
+        document.getElementById('authIntro').textContent = '填写姓名、邮箱和密码，注册成功后立即进入会员俱乐部。';
+        document.getElementById('authSubmit').innerHTML = '注册并进入俱乐部 <span aria-hidden="true">→</span>';
+        document.getElementById('authApply').textContent = '已经注册？返回会员登录';
+        document.getElementById('authDemoNote').textContent = '密码不会以明文保存。注册成功后会自动登录。';
+      } else {
+        document.getElementById('authEyebrow').textContent = 'Member verification';
+        document.getElementById('authTitle').textContent = '会员登录';
+        document.getElementById('authIntro').textContent = '使用已经注册的会员邮箱与密码进入俱乐部。';
+        document.getElementById('authSubmit').innerHTML = '进入俱乐部 <span aria-hidden="true">→</span>';
+        document.getElementById('authApply').textContent = '还没有账号？立即注册会员';
+        document.getElementById('authDemoNote').textContent = '会员身份由服务器验证，登录状态保存在安全 Cookie 中。';
+      }
+      showAuthStatus('');
+    }
+
+    function setAuthBusy(busy) {
+      const submit = document.getElementById('authSubmit');
+      submit.disabled = busy;
+      if (busy) submit.textContent = authMode === 'register' ? '正在提交…' : '正在验证…';
+      else if (document.getElementById('authRole').value === 'admin') submit.textContent = '管理员入口暂未开放';
+      else submit.innerHTML = authMode === 'register' ? '注册并进入俱乐部 <span aria-hidden="true">→</span>' : '进入俱乐部 <span aria-hidden="true">→</span>';
+    }
+
     function openAuth(role = 'member') {
       const isAdmin = role === 'admin';
       authLastFocus = document.activeElement;
       authFromEntry = !entryGate.hidden && !entryGate.classList.contains('is-dismissed');
       authForm.reset();
       document.getElementById('authRole').value = isAdmin ? 'admin' : 'member';
-      document.getElementById('authEyebrow').textContent = isAdmin ? 'Administrator verification' : 'Member verification';
-      document.getElementById('authTitle').textContent = isAdmin ? '管理员登录' : '会员登录';
-      document.getElementById('authIntro').textContent = isAdmin ? '请输入管理员账号与密码，验证后进入管理台。' : '请输入会员账号与密码，验证后进入俱乐部。';
-      document.getElementById('authAccountLabel').textContent = isAdmin ? '管理员账号' : '会员账号';
-      document.getElementById('authSubmit').innerHTML = `${isAdmin ? '进入管理台' : '进入俱乐部'} <span aria-hidden="true">→</span>`;
+      document.getElementById('authModeSwitch').hidden = isAdmin;
+      document.getElementById('authAccountLabel').textContent = isAdmin ? '管理员邮箱' : '会员邮箱';
       document.getElementById('authApply').hidden = isAdmin;
-      document.getElementById('authDemoNote').textContent = isAdmin ? '当前是静态网站演示：填写任意非空账号与密码即可查看界面。正式上线时将连接独立的管理员认证系统。' : '当前是静态网站演示：填写任意非空账号与密码即可查看界面。正式上线时将连接加密的会员账户系统。';
-      document.getElementById('authStatus').textContent = '';
+      setAuthMode('login');
       authModal.hidden = false;
       document.body.classList.add('no-scroll');
       requestAnimationFrame(() => authModal.classList.add('is-open'));
@@ -1541,8 +1620,34 @@
       document.getElementById('memberPanel').toggleAttribute('inert', role === 'visitor');
       document.getElementById('memberPanel').setAttribute('aria-hidden', String(role === 'visitor'));
       document.getElementById('adminPanel').hidden = role !== 'admin';
-      document.getElementById('identityLabel').textContent = { visitor: '游客', member: '会员', admin: '管理员' }[role];
+      document.getElementById('identityLabel').textContent = role === 'member' && currentUser ? `${currentUser.displayName} · 退出` : { visitor: '游客', member: '会员', admin: '管理员' }[role];
       if (announce) document.getElementById('roleMessage').textContent = `当前身份：${{ visitor: '游客', member: '会员', admin: '管理员' }[role]}`;
+    }
+
+    async function restoreMemberSession() {
+      try {
+        const response = await fetch(integrationConfig.memberSession, { credentials: 'same-origin' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.authenticated && data.user?.role === 'member' && data.user?.status === 'active') {
+          currentUser = data.user;
+          setRole('member', false);
+          dismissEntry();
+        }
+      } catch (error) {
+        // Public reading remains available if the account API is temporarily unavailable.
+      }
+    }
+
+    async function logoutMember() {
+      try {
+        await fetch(integrationConfig.memberLogout, { method: 'POST', credentials: 'same-origin' });
+      } catch (error) {
+        // The local interface still returns to visitor mode.
+      }
+      currentUser = null;
+      setRole('visitor');
+      document.getElementById('roleMessage').textContent = '已安全退出会员账号。';
     }
 
     function getItem(type, id) {
@@ -1740,17 +1845,55 @@
     searchPanel.addEventListener('click', event => { if (event.target === searchPanel) closeSearch(); });
     searchInput.addEventListener('input', event => runSearch(event.target.value));
     authModal.addEventListener('click', event => { if (event.target === authModal || event.target.closest('[data-auth-close]')) closeAuth(); });
-    authForm.addEventListener('submit', event => {
+    authForm.addEventListener('submit', async event => {
       event.preventDefault();
       const role = new FormData(event.currentTarget).get('role') === 'admin' ? 'admin' : 'member';
-      setRole(role);
-      closeAuth(false);
-      if (authFromEntry) dismissEntry();
-      else document.getElementById('access').scrollIntoView({ behavior: 'smooth' });
+      if (role === 'admin') {
+        showAuthStatus('管理员安全入口尚未开放，普通会员接口不会授予管理员权限。');
+        return;
+      }
+
+      const formData = new FormData(event.currentTarget);
+      const payload = {
+        email: formData.get('email').trim(),
+        password: formData.get('password'),
+        website: formData.get('website')
+      };
+      const registering = authMode === 'register';
+      if (registering) {
+        payload.displayName = formData.get('displayName').trim();
+        if (payload.password !== formData.get('passwordConfirm')) {
+          showAuthStatus('两次输入的密码不一致。');
+          return;
+        }
+      }
+
+      setAuthBusy(true);
+      try {
+        const response = await fetch(registering ? integrationConfig.memberRegister : integrationConfig.memberLogin, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({ error: '服务器返回了无法识别的响应。' }));
+        if (!response.ok) throw new Error(data.error || '请求没有成功，请稍后再试。');
+
+        currentUser = data.user;
+        setRole('member');
+        closeAuth(false);
+        if (authFromEntry) dismissEntry();
+        else document.getElementById('access').scrollIntoView({ behavior: 'smooth' });
+      } catch (error) {
+        showAuthStatus(error.message || '网络错误，请稍后再试。');
+      } finally {
+        setAuthBusy(false);
+      }
     });
     document.getElementById('authApply').addEventListener('click', () => {
-      document.getElementById('authStatus').textContent = '会员申请入口将在账户系统接入后开放。';
+      setAuthMode(authMode === 'register' ? 'login' : 'register');
     });
+    document.querySelectorAll('[data-auth-mode]').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
 
     const menuToggle = document.getElementById('menuToggle');
     const navLinks = document.getElementById('navLinks');
@@ -1760,8 +1903,9 @@
     });
     navLinks.addEventListener('click', () => { navLinks.classList.remove('is-open'); menuToggle.setAttribute('aria-expanded', 'false'); });
 
-    document.getElementById('identityButton').addEventListener('click', () => {
+    document.getElementById('identityButton').addEventListener('click', async () => {
       if (currentRole === 'visitor') openAuth('member');
+      else if (currentRole === 'member') await logoutMember();
       else document.getElementById('access').scrollIntoView({ behavior: 'smooth' });
     });
 
@@ -1801,6 +1945,7 @@
     });
 
     setRole('visitor', false);
+    restoreMemberSession();
 
     // 从文章页返回或通过站内锚点进入时，直接恢复对应内容区，不再次显示身份选择。
     const returnSections = new Set(['#journal', '#projects', '#access', '#about']);
