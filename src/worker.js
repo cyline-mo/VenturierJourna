@@ -12,6 +12,38 @@ const ARTICLES = Object.freeze({
   'money-in-the-bank-consumption-defense': '2026年7月消费数据分析',
   'hidden-hunger-in-a-depression': '萧条中的隐性饥饿'
 });
+const PUBLIC_PORTFOLIO = Object.freeze({
+  snapshotAt: '2026-08-19',
+  currency: 'XOF',
+  project: {
+    id: 'west-africa-paper-recycling',
+    title: '西非纸张回收与纸块制造项目',
+    region: '西非',
+    state: '运营中',
+    participation: '暂未开放',
+    employees: 17,
+    verifiedProductionTonnes: 30.35,
+    verifiedBlocks: 341,
+    shipmentBatches: 3,
+    estimatedShipmentTonnes: 67.6
+  },
+  totals: {
+    revenue: 13516101,
+    cost: 8037126,
+    profit: 5478975,
+    margin: 0.4054
+  },
+  quarters: [
+    { period: '2026 Q1', revenue: 4448327, cost: 2408409, profit: 2039918, margin: 0.4586, estimatedShipmentTonnes: 22.3 },
+    { period: '2026 Q2', revenue: 5071040, cost: 2997798, profit: 2073242, margin: 0.4088, estimatedShipmentTonnes: 25.4 },
+    { period: '2026 Q3 · 截至 08.19', revenue: 3996734, cost: 2630919, profit: 1365815, margin: 0.3417, estimatedShipmentTonnes: 20.0 }
+  ],
+  notes: [
+    '销售收入采用统一内部汇率口径折算为 XOF；发货量按统一销售估值口径估算。',
+    '第一季度成本资料不完整；第三季度成本截至 8 月 15 日，销售收入截至 8 月 19 日。',
+    '本页为脱敏账册快照和经营估算，不构成投资建议。'
+  ]
+});
 let analyticsSchemaReady = null;
 
 export default {
@@ -43,6 +75,9 @@ export default {
       }
       if (url.pathname === '/api/auth/session' && request.method === 'GET') {
         return await getSession(request, env);
+      }
+      if (url.pathname === '/api/member/portfolio/public' && request.method === 'GET') {
+        return await getPublicPortfolio(request, env);
       }
       if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
         requireSameOrigin(request);
@@ -135,6 +170,25 @@ async function requireAdminSession(request, env) {
   if (!user || user.status !== 'active') throw new HttpError(401, '管理员登录已失效。');
   if (user.role !== 'admin') throw new HttpError(403, '当前账号没有管理员权限。');
   return user;
+}
+
+async function requireMemberSession(request, env) {
+  const token = parseCookies(request.headers.get('Cookie') || '')[SESSION_COOKIE];
+  if (!token) throw new HttpError(401, '请先登录会员账号。');
+  const tokenHash = await sha256Hex(token);
+  const user = await env.DB.prepare(`
+    SELECT u.id, u.role, u.status
+    FROM sessions s JOIN users u ON u.id = s.user_id
+    WHERE s.token_hash = ?1 AND s.expires_at > ?2
+  `).bind(tokenHash, unixTime()).first();
+  if (!user || user.status !== 'active') throw new HttpError(401, '会员登录已失效。');
+  if (!['member', 'admin'].includes(user.role)) throw new HttpError(403, '当前账号没有会员权限。');
+  return user;
+}
+
+async function getPublicPortfolio(request, env) {
+  await requireMemberSession(request, env);
+  return json({ ok: true, portfolio: PUBLIC_PORTFOLIO });
 }
 
 async function ensureAnalyticsSchema(db) {
