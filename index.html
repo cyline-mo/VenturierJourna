@@ -790,7 +790,7 @@
     .dashboard-block__head { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin-bottom: 1rem; }
     .dashboard-block__head h4 { margin: 0; font: 400 1.5rem/1.2 var(--display); }
     .dashboard-block__head span { color: var(--muted); font: 600 .58rem/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-    .investment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .investment-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem; }
     .investment-card { display: flex; flex-direction: column; min-height: 270px; padding: 1.25rem; border: 1px solid var(--line); background: var(--card); }
     .investment-card__top { display: flex; justify-content: space-between; gap: 1rem; color: var(--muted); font: 600 .56rem/1 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
     .investment-card__state { color: var(--moss); }
@@ -1167,52 +1167,44 @@
           <div class="access-panel" id="memberPanel" hidden>
             <div class="dashboard-head">
               <div><div class="dashboard-head__status">● Member access active</div><h3>公共投资组合</h3></div>
-              <span class="demo-label">示例数据 · 非真实资产</span>
+              <span class="demo-label">公开摘要 · 敏感信息已隐藏</span>
             </div>
 
             <div class="metrics-grid" aria-label="公共投资概览">
-              <div class="metric"><div class="metric__label">公开管理规模</div><div class="metric__value">¥1.26M</div><div class="metric__delta metric__delta--neutral">3 个开放项目</div></div>
-              <div class="metric"><div class="metric__label">本年组合收益</div><div class="metric__value">+12.8%</div><div class="metric__delta">↑ 4.1% vs. 基准</div></div>
-              <div class="metric"><div class="metric__label">已实现盈利</div><div class="metric__value">¥86.4K</div><div class="metric__delta">过去 12 个月</div></div>
-              <div class="metric"><div class="metric__label">当前身份持仓</div><div class="metric__value">2.40%</div><div class="metric__delta metric__delta--neutral">演示账户</div></div>
+              <div class="metric"><div class="metric__label">累计销售收入</div><div class="metric__value" id="portfolioRevenue">13.52M</div><div class="metric__delta metric__delta--neutral">XOF · 统一口径折算</div></div>
+              <div class="metric"><div class="metric__label">账面成本</div><div class="metric__value" id="portfolioCost">8.04M</div><div class="metric__delta metric__delta--neutral">XOF · 已核验账册</div></div>
+              <div class="metric"><div class="metric__label">估算利润</div><div class="metric__value" id="portfolioProfit">5.48M</div><div class="metric__delta" id="portfolioMargin">40.5% · 非审计利润</div></div>
+              <div class="metric"><div class="metric__label">估算发货量</div><div class="metric__value" id="portfolioShipment">67.6t</div><div class="metric__delta metric__delta--neutral">3 批 · 统一销售口径</div></div>
             </div>
 
+            <div class="admin-callout" id="portfolioDisclosure">数据截至 2026 年 8 月 19 日。第一季度成本资料不完整；第三季度成本截至 8 月 15 日、销售收入截至 8 月 19 日。收入和发货量均按统一内部口径折算，属于脱敏经营估算。客户、单价、合同、供应商、账户与交易明细不公开。</div>
+
             <div class="dashboard-block">
-              <div class="dashboard-block__head"><h4>可参与项目</h4><span>Open opportunities / 03</span></div>
+              <div class="dashboard-block__head"><h4>公开项目</h4><span>Public projects / 01</span></div>
               <div class="investment-grid">
                 <article class="investment-card">
-                  <div class="investment-card__top"><span>INV—01</span><span class="investment-card__state">开放认购</span></div>
-                  <h4>Atlas Seed Lab</h4><p>为探索系统的用户研究、产品原型与首批独立创作者测试提供资金。</p>
-                  <div class="investment-card__numbers"><span>目标 ¥480K</span><span>已完成 67%</span></div>
-                  <button class="investment-action" type="button" data-invest-title="Atlas Seed Lab" data-invest-min="¥10,000">查看并参与 →</button>
-                </article>
-                <article class="investment-card">
-                  <div class="investment-card__top"><span>INV—02</span><span class="investment-card__state">会员专属</span></div>
-                  <h4>Northstar Revenue</h4><p>基于产品未来收入分成的实验型投资单元，季度公开经营进展。</p>
-                  <div class="investment-card__numbers"><span>目标 ¥620K</span><span>已完成 52%</span></div>
-                  <button class="investment-action" type="button" data-invest-title="Northstar Revenue" data-invest-min="¥25,000">查看并参与 →</button>
-                </article>
-                <article class="investment-card">
-                  <div class="investment-card__top"><span>INV—03</span><span class="investment-card__state">意向登记</span></div>
-                  <h4>Meridian City Fund</h4><p>支持城市路线、音频档案与在地创作者合作的内容基金。</p>
-                  <div class="investment-card__numbers"><span>目标 ¥260K</span><span>已完成 81%</span></div>
-                  <button class="investment-action" type="button" data-invest-title="Meridian City Fund" data-invest-min="¥5,000">查看并参与 →</button>
+                  <div class="investment-card__top"><span>INV—01</span><span class="investment-card__state">运营中</span></div>
+                  <h4>西非纸张回收与纸块制造项目</h4><p>回收并分拣废纸，完成压块、库存与批次发运，在西非建立稳定的纸张循环供应体系。</p>
+                  <div class="investment-card__numbers"><span id="portfolioEmployees">17 名员工</span><span>已核验产量 30.35t</span><span>参与暂未开放</span></div>
+                  <button class="investment-action" type="button" data-invest-title="西非纸张回收与纸块制造项目" data-invest-status="参与暂未开放">查看项目概况 →</button>
                 </article>
               </div>
             </div>
 
             <div class="dashboard-block">
-              <div class="dashboard-block__head"><h4>项目盈利与公共持仓</h4><span>Updated 2026.08 · 示例</span></div>
+              <div class="dashboard-block__head"><h4>季度经营汇总</h4><span id="portfolioUpdated">截至 2026.08.19 · XOF</span></div>
               <div class="data-table-wrap">
                 <table class="data-table">
-                  <thead><tr><th>项目</th><th>公开投入</th><th>当前估值</th><th>累计盈利</th><th>收益率</th><th>组合持仓</th></tr></thead>
-                  <tbody>
-                    <tr><td>Atlas Seed Lab</td><td>¥420,000</td><td>¥486,000</td><td class="positive">+¥66,000</td><td class="positive">+15.7%</td><td><span class="allocation"><span class="allocation__track"><span class="allocation__fill" style="width:46%"></span></span>46%</span></td></tr>
-                    <tr><td>Northstar Revenue</td><td>¥520,000</td><td>¥584,000</td><td class="positive">+¥64,000</td><td class="positive">+12.3%</td><td><span class="allocation"><span class="allocation__track"><span class="allocation__fill" style="width:31%"></span></span>31%</span></td></tr>
-                    <tr><td>Meridian City Fund</td><td>¥320,000</td><td>¥346,000</td><td class="positive">+¥26,000</td><td class="positive">+8.1%</td><td><span class="allocation"><span class="allocation__track"><span class="allocation__fill" style="width:23%"></span></span>23%</span></td></tr>
+                  <thead><tr><th>期间</th><th>销售收入</th><th>账面成本</th><th>估算利润</th><th>利润率</th><th>估算发货量</th></tr></thead>
+                  <tbody id="portfolioQuarterRows">
+                    <tr><td>2026 Q1</td><td>4.45M XOF</td><td>2.41M XOF</td><td class="positive">2.04M XOF</td><td>45.9%</td><td>22.3t</td></tr>
+                    <tr><td>2026 Q2</td><td>5.07M XOF</td><td>3.00M XOF</td><td class="positive">2.07M XOF</td><td>40.9%</td><td>25.4t</td></tr>
+                    <tr><td>2026 Q3 · 截至 08.19</td><td>4.00M XOF</td><td>2.63M XOF</td><td class="positive">1.37M XOF</td><td>34.2%</td><td>20.0t</td></tr>
+                    <tr class="ledger-total"><td>累计</td><td>13.52M XOF</td><td>8.04M XOF</td><td class="positive">5.48M XOF</td><td>40.5%</td><td>67.6t</td></tr>
                   </tbody>
                 </table>
               </div>
+              <p class="drawer__body" style="margin-top:1rem">产能补充：已核验的 2026 年 1 月生产量为 30.35 吨、341 块；当前团队 17 人。以上数据为账册快照与估算，不构成投资建议。</p>
             </div>
 
             <div class="admin-panel access-panel" id="adminPanel" hidden>
@@ -1252,9 +1244,9 @@
                     <div class="system-card__foot"><span>目标路径：content/articles/</span><br><button class="sync-button" type="button" data-sync-source="github">测试发布流程</button></div>
                   </article>
                   <article class="system-card">
-                    <div class="system-card__top"><span class="system-card__icon">API</span><span class="system-card__status system-card__status--ready" id="portfolioStatus">演示在线</span></div>
-                    <h5>公共盈利接口</h5><p>每天读取项目收益与持仓快照，只向会员返回可公开字段和汇总数据。</p>
-                    <div class="system-card__foot"><span>计划：每日 02:00 UTC</span><br><button class="sync-button" type="button" data-sync-source="portfolio">模拟今日更新</button></div>
+                    <div class="system-card__top"><span class="system-card__icon">API</span><span class="system-card__status" id="portfolioStatus">账册快照已核验</span></div>
+                    <h5>公共项目接口</h5><p>当前提供截至 2026 年 8 月 19 日的脱敏快照；客户、价格和交易明细不会进入会员接口。</p>
+                    <div class="system-card__foot"><span>下一步：接入自动日更</span></div>
                   </article>
                   <article class="system-card">
                     <div class="system-card__top"><span class="system-card__icon">AI</span><span class="system-card__status" id="gmailStatus">等待授权</span></div>
@@ -1522,6 +1514,7 @@
     let lastFocus = null;
     let drawerReturnHash = '#journal';
     let currentRole = 'visitor';
+    let portfolioSnapshot = null;
 
     // 正式部署时由服务端实现这些路由；前端永远不保存 GitHub/Gmail 密钥。
     const integrationConfig = Object.freeze({
@@ -1637,6 +1630,44 @@
       if (announce) document.getElementById('roleMessage').textContent = `当前身份：${{ visitor: '游客', member: '会员', admin: '管理员' }[role]}`;
     }
 
+    function compactXof(value) {
+      return `${(Number(value || 0) / 1000000).toFixed(2)}M`;
+    }
+
+    function renderPublicPortfolio(portfolio) {
+      portfolioSnapshot = portfolio;
+      const { project, totals, quarters, snapshotAt } = portfolio;
+      document.getElementById('portfolioRevenue').textContent = compactXof(totals.revenue);
+      document.getElementById('portfolioCost').textContent = compactXof(totals.cost);
+      document.getElementById('portfolioProfit').textContent = compactXof(totals.profit);
+      document.getElementById('portfolioMargin').textContent = `${(totals.margin * 100).toFixed(1)}% · 非审计利润`;
+      document.getElementById('portfolioShipment').textContent = `${project.estimatedShipmentTonnes.toFixed(1)}t`;
+      document.getElementById('portfolioEmployees').textContent = `${project.employees} 名员工`;
+      document.getElementById('portfolioUpdated').textContent = `截至 ${snapshotAt.replaceAll('-', '.')} · ${portfolio.currency}`;
+      document.getElementById('portfolioQuarterRows').innerHTML = `${quarters.map(quarter => `<tr>
+        <td>${escapeHtml(quarter.period)}</td>
+        <td>${compactXof(quarter.revenue)} XOF</td>
+        <td>${compactXof(quarter.cost)} XOF</td>
+        <td class="positive">${compactXof(quarter.profit)} XOF</td>
+        <td>${(quarter.margin * 100).toFixed(1)}%</td>
+        <td>${quarter.estimatedShipmentTonnes.toFixed(1)}t</td>
+      </tr>`).join('')}<tr class="ledger-total">
+        <td>累计</td><td>${compactXof(totals.revenue)} XOF</td><td>${compactXof(totals.cost)} XOF</td>
+        <td class="positive">${compactXof(totals.profit)} XOF</td><td>${(totals.margin * 100).toFixed(1)}%</td><td>${project.estimatedShipmentTonnes.toFixed(1)}t</td>
+      </tr>`;
+    }
+
+    async function loadPublicPortfolio() {
+      try {
+        const response = await fetch(integrationConfig.publicPortfolio, { credentials: 'same-origin' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.ok && data.portfolio) renderPublicPortfolio(data.portfolio);
+      } catch (error) {
+        // The verified HTML snapshot remains visible if the live member API is unavailable.
+      }
+    }
+
     async function restoreMemberSession() {
       try {
         const response = await fetch(integrationConfig.memberSession, { credentials: 'same-origin' });
@@ -1646,6 +1677,7 @@
           currentUser = data.user;
           setRole('member', false);
           dismissEntry();
+          await loadPublicPortfolio();
         }
       } catch (error) {
         // Public reading remains available if the account API is temporarily unavailable.
@@ -1722,20 +1754,19 @@
       history.replaceState(null, '', `#${type}-${id}`);
     }
 
-    function openInvestment(title, minimum) {
+    function openInvestment(title, status) {
       if (currentRole === 'visitor') {
-        setRole('member');
+        openAuth('member');
         return;
       }
       lastFocus = document.activeElement;
       drawerReturnHash = '#access';
-      drawerKind.textContent = 'Member investment · Demo';
+      drawerKind.textContent = 'Member investment · Public overview';
       drawerContent.innerHTML = `<div class="tagline">参与项目 / 会员权限</div>
         <h2 id="drawerTitle">${escapeHtml(title)}</h2>
-        <p class="drawer__lead">查看公开项目信息并登记参与意向。正式版本会在后端完成会员资格、风险披露、额度与合规验证。</p>
-        <div class="drawer__meta"><span>最低意向 ${escapeHtml(minimum)}</span><span>非约束性登记</span><span>示例流程</span></div>
-        <div class="drawer__body"><p>本页面中的金额、盈利和持仓均为版式示例，不构成投资建议或真实认购。接入后端后，这里会显示项目文件、风险说明与会员可参与额度。</p></div>
-        <div class="participation-form"><label for="participationAmount">参与意向金额</label><div class="participation-row"><input id="participationAmount" type="text" inputmode="decimal" placeholder="例如：${escapeHtml(minimum)}"><button class="button button--small" type="button" data-participate>保存意向</button></div><div class="role-message" id="participationMessage" aria-live="polite"></div></div>`;
+        <p class="drawer__lead">这是一个处于运营阶段的西非实体纸品项目，覆盖废纸回收、分拣压块、库存管理、质量控制与批次发运。</p>
+        <div class="drawer__meta"><span>运营中</span><span>${escapeHtml(status)}</span><span>17 名员工</span><span>敏感信息已隐藏</span></div>
+        <div class="drawer__body"><p>截至 2026 年 8 月 19 日：累计销售收入约 13.52M XOF，账面成本约 8.04M XOF，估算利润约 5.48M XOF；估算发货量 67.6 吨。已核验的 1 月生产量为 30.35 吨、341 块。</p><p>第一季度成本资料不完整；第三季度成本截至 8 月 15 日、销售收入截至 8 月 19 日。收入和发货量按统一内部口径折算，属于经营估算，不构成投资建议。</p><p>客户名称、订单单价、合同金额、采购价格、供应商信息、账户余额与账本明细不会公开。</p></div>`;
       drawer.classList.add('is-open');
       document.body.classList.add('no-scroll');
       document.getElementById('drawerClose').focus();
@@ -1801,7 +1832,7 @@
       }
       const investment = event.target.closest('[data-invest-title]');
       if (investment) {
-        openInvestment(investment.dataset.investTitle, investment.dataset.investMin);
+        openInvestment(investment.dataset.investTitle, investment.dataset.investStatus || '参与状态待确认');
         return;
       }
       const participate = event.target.closest('[data-participate]');
@@ -1894,6 +1925,7 @@
 
         currentUser = data.user;
         setRole('member');
+        await loadPublicPortfolio();
         closeAuth(false);
         if (authFromEntry) dismissEntry();
         else document.getElementById('access').scrollIntoView({ behavior: 'smooth' });
