@@ -10,7 +10,8 @@ const ARTICLES = Object.freeze({
   'fourth-fiscal-mobilization': '第四次财政总动员：当未来已经被提前使用',
   'july-2026-financial-data': '2026年7月金融数据：社融没有塌，私人信用需求正在退潮',
   'money-in-the-bank-consumption-defense': '2026年7月消费数据分析',
-  'hidden-hunger-in-a-depression': '萧条中的隐性饥饿'
+  'hidden-hunger-in-a-depression': '萧条中的隐性饥饿',
+  'modern-sang-hongyang-question': '现代桑弘羊之问'
 });
 const PUBLIC_PORTFOLIO = Object.freeze({
   snapshotAt: '2026-08-19',
@@ -45,6 +46,7 @@ const PUBLIC_PORTFOLIO = Object.freeze({
   ]
 });
 let analyticsSchemaReady = null;
+let commentsSchemaReady = null;
 
 export default {
   async fetch(request, env) {
@@ -64,6 +66,14 @@ export default {
       }
       if (url.pathname === '/api/admin/analytics/articles' && request.method === 'GET') {
         return await getArticleAnalytics(request, env);
+      }
+      const commentsRoute = url.pathname.match(/^\/api\/articles\/([a-z0-9-]+)\/comments$/);
+      if (commentsRoute && request.method === 'GET') {
+        return await listArticleComments(commentsRoute[1], env);
+      }
+      if (commentsRoute && request.method === 'POST') {
+        requireSameOrigin(request);
+        return await createArticleComment(commentsRoute[1], request, env);
       }
       if (url.pathname === '/api/auth/register' && request.method === 'POST') {
         requireSameOrigin(request);
@@ -158,6 +168,52 @@ async function getArticleAnalytics(request, env) {
   return json({ ok: true, generatedAt: unixTime(), articles });
 }
 
+async function listArticleComments(articleSlug, env) {
+  if (!Object.hasOwn(ARTICLES, articleSlug)) throw new HttpError(404, '文章不存在。');
+  await ensureCommentsSchema(env.DB);
+  const result = await env.DB.prepare(`
+    SELECT c.id, c.body, c.created_at, u.display_name
+    FROM article_comments c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.article_slug = ?1 AND c.status = 'visible' AND u.status = 'active'
+    ORDER BY c.created_at DESC, c.id DESC
+    LIMIT 100
+  `).bind(articleSlug).all();
+  const comments = (result.results || []).reverse().map(row => ({
+    id: row.id,
+    displayName: row.display_name,
+    content: row.body,
+    createdAt: Number(row.created_at)
+  }));
+  return json({ ok: true, articleSlug, comments });
+}
+
+async function createArticleComment(articleSlug, request, env) {
+  if (!Object.hasOwn(ARTICLES, articleSlug)) throw new HttpError(404, '文章不存在。');
+  const user = await requireMemberSession(request, env);
+  const body = await readJson(request);
+  const content = String(body.content || '').replace(/\r\n/g, '\n').trim();
+  if (content.length < 2) throw new HttpError(400, '评论至少需要 2 个字符。');
+  if (content.length > 800) throw new HttpError(400, '评论不能超过 800 个字符。');
+
+  await ensureCommentsSchema(env.DB);
+  if (!(await consumeRateLimit(env.DB, `comment:${user.id}`, 5, 60))) {
+    throw new HttpError(429, '发言太频繁，请一分钟后再试。');
+  }
+
+  const id = crypto.randomUUID();
+  const createdAt = unixTime();
+  await env.DB.prepare(`
+    INSERT INTO article_comments (id, article_slug, user_id, body, status, created_at, updated_at)
+    VALUES (?1, ?2, ?3, ?4, 'visible', ?5, ?5)
+  `).bind(id, articleSlug, user.id, content, createdAt).run();
+
+  return json({
+    ok: true,
+    comment: { id, displayName: user.display_name, content, createdAt }
+  }, 201);
+}
+
 async function requireAdminSession(request, env) {
   const token = parseCookies(request.headers.get('Cookie') || '')[SESSION_COOKIE];
   if (!token) throw new HttpError(401, '请先登录管理员账号。');
@@ -177,7 +233,7 @@ async function requireMemberSession(request, env) {
   if (!token) throw new HttpError(401, '请先登录会员账号。');
   const tokenHash = await sha256Hex(token);
   const user = await env.DB.prepare(`
-    SELECT u.id, u.role, u.status
+    SELECT u.id, u.display_name, u.role, u.status
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ?1 AND s.expires_at > ?2
   `).bind(tokenHash, unixTime()).first();
@@ -214,6 +270,31 @@ async function ensureAnalyticsSchema(db) {
     });
   }
   return analyticsSchemaReady;
+}
+
+async function ensureCommentsSchema(db) {
+  if (!commentsSchemaReady) {
+    commentsSchemaReady = db.batch([
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS article_comments (
+          id TEXT PRIMARY KEY,
+          article_slug TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          body TEXT NOT NULL CHECK (length(body) BETWEEN 2 AND 800),
+          status TEXT NOT NULL DEFAULT 'visible' CHECK (status IN ('visible', 'hidden')),
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) STRICT
+      `),
+      db.prepare('CREATE INDEX IF NOT EXISTS article_comments_slug_time_idx ON article_comments(article_slug, created_at)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS article_comments_user_idx ON article_comments(user_id)')
+    ]).catch(error => {
+      commentsSchemaReady = null;
+      throw error;
+    });
+  }
+  return commentsSchemaReady;
 }
 
 function normalizeCountry(value) {
