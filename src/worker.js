@@ -17,7 +17,7 @@ const PUBLIC_PORTFOLIO = Object.freeze({
   currency: 'XOF',
   project: {
     id: 'west-africa-paper-recycling',
-    title: '西非纸张回收与纸块制造项目',
+    title: '西非纸制品项目',
     region: '西非',
     state: '运营中',
     participation: '暂未开放',
