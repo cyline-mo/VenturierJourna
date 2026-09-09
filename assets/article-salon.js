@@ -6,61 +6,43 @@
   const articleSlug = decodeURIComponent(match[1]);
   const endpoint = `/api/articles/${encodeURIComponent(articleSlug)}/comments`;
 
-  const style = document.createElement('style');
-  style.textContent = `
-    .salon{border-top:1px solid var(--line);background:color-mix(in srgb,var(--paper) 94%,var(--moss) 6%)}
-    .salon__inner{width:min(calc(100% - 3rem),820px);margin:auto;padding:clamp(4rem,8vw,7rem) 0}
-    .salon__eyebrow{color:var(--accent);font:650 .62rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
-    .salon h2{margin:.9rem 0 .8rem;font:400 clamp(2.5rem,6vw,4.6rem)/1 var(--display);letter-spacing:-.045em}
-    .salon__intro{max-width:680px;margin:0;color:var(--muted);font-size:.9rem}
-    .salon__access,.salon__composer{margin-top:2rem;padding:1.2rem;border:1px solid var(--line);background:var(--paper)}
-    .salon__access a{color:var(--accent);font-weight:700;text-decoration:none}
-    .salon__identity{margin:0 0 .8rem;color:var(--muted);font-size:.76rem}
-    .salon textarea{display:block;width:100%;min-height:120px;resize:vertical;border:1px solid var(--line);padding:1rem;background:transparent;color:var(--ink);font:inherit;line-height:1.7}
-    .salon textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px}
-    .salon__actions{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.8rem}
-    .salon__count{color:var(--muted);font:600 .62rem/1 var(--mono)}
-    .salon__submit{border:0;border-radius:999px;padding:.78rem 1.2rem;background:var(--ink);color:var(--paper);font-weight:700;cursor:pointer}
-    .salon__submit:disabled{opacity:.55;cursor:wait}
-    .salon__status{min-height:1.4em;margin:1rem 0 0;color:var(--muted);font-size:.76rem}
-    .salon__list{margin-top:2.2rem;border-top:1px solid var(--line)}
-    .salon__comment{display:grid;grid-template-columns:145px minmax(0,1fr);gap:1.2rem;padding:1.35rem 0;border-bottom:1px solid var(--line)}
-    .salon__author{font-weight:750}.salon__time{display:block;margin-top:.25rem;color:var(--muted);font:500 .58rem/1.4 var(--mono)}
-    .salon__body{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--display);font-size:1.04rem;line-height:1.8}
-    .salon__empty{padding:2rem 0;color:var(--muted);font-size:.85rem}
-    @media(max-width:620px){.salon__inner{width:min(calc(100% - 2rem),820px)}.salon__comment{grid-template-columns:1fr;gap:.65rem}.salon__actions{align-items:flex-end}}
-  `;
-  document.head.append(style);
+  let salon = document.querySelector('#salon');
+  if (!salon) {
+    salon = document.createElement('section');
+    salon.className = 'salon';
+    salon.id = 'salon';
+    salon.setAttribute('aria-labelledby', 'salonTitle');
+    salon.innerHTML = '<div class="salon__inner"><div class="salon__eyebrow">Article salon · 文章沙龙</div><h2 id="salonTitle">回应与讨论</h2><p class="salon__intro">游客可以使用昵称直接参加讨论；会员登录后将使用会员名称。</p><div id="salonMount"></div></div>';
+    document.querySelector('main')?.insertAdjacentElement('afterend', salon);
+  }
 
-  const salon = document.createElement('section');
-  salon.className = 'salon';
-  salon.id = 'salon';
-  salon.setAttribute('aria-labelledby', 'salonTitle');
-  salon.innerHTML = `
-    <div class="salon__inner">
-      <div class="salon__eyebrow">Article salon · 文章沙龙</div>
-      <h2 id="salonTitle">回应与讨论</h2>
-      <p class="salon__intro">评论向所有读者公开。注册会员可以参与讨论；请回应观点本身，并保留彼此改变判断的空间。</p>
-      <div class="salon__access" id="salonAccess" hidden>想参加讨论？<a href="../index.html#access">登录或注册会员 →</a></div>
-      <form class="salon__composer" id="salonForm" hidden>
-        <p class="salon__identity" id="salonIdentity"></p>
-        <label for="salonContent" class="salon__eyebrow">你的回应</label>
-        <textarea id="salonContent" name="content" minlength="2" maxlength="800" required placeholder="写下你的判断、补充或异议……"></textarea>
-        <div class="salon__actions"><span class="salon__count" id="salonCount">0 / 800</span><button class="salon__submit" type="submit">发表回应</button></div>
-      </form>
-      <p class="salon__status" id="salonStatus" aria-live="polite">正在载入沙龙……</p>
-      <div class="salon__list" id="salonList"></div>
-    </div>`;
-  document.querySelector('main')?.append(salon);
+  const mount = salon.querySelector('#salonMount');
+  if (!mount) return;
+  mount.innerHTML = `
+    <form class="salon__composer" id="salonForm">
+      <p class="salon__identity" id="salonIdentity" hidden></p>
+      <div class="salon__guest-fields" id="salonGuestFields">
+        <label class="salon__field" for="salonName"><span class="salon__eyebrow">游客昵称</span><input id="salonName" name="displayName" minlength="2" maxlength="30" autocomplete="nickname" placeholder="写下你的称呼" required></label>
+        <span class="salon__guest-note">无需注册或登录</span>
+      </div>
+      <label class="salon__field" for="salonContent"><span class="salon__eyebrow">你的回应</span><textarea id="salonContent" name="content" minlength="2" maxlength="800" required placeholder="写下你的判断、补充或异议……"></textarea></label>
+      <label class="salon__trap" aria-hidden="true">Website<input id="salonWebsite" name="website" tabindex="-1" autocomplete="off"></label>
+      <div class="salon__actions"><span class="salon__count" id="salonCount">0 / 800</span><button class="salon__submit" type="submit">发表回应</button></div>
+    </form>
+    <p class="salon__status" id="salonStatus" aria-live="polite">正在载入沙龙……</p>
+    <div class="salon__list" id="salonList"></div>`;
 
-  const access = salon.querySelector('#salonAccess');
   const form = salon.querySelector('#salonForm');
   const identity = salon.querySelector('#salonIdentity');
+  const guestFields = salon.querySelector('#salonGuestFields');
+  const nameInput = salon.querySelector('#salonName');
   const textarea = salon.querySelector('#salonContent');
+  const website = salon.querySelector('#salonWebsite');
   const counter = salon.querySelector('#salonCount');
   const status = salon.querySelector('#salonStatus');
   const list = salon.querySelector('#salonList');
   const submit = form.querySelector('button[type="submit"]');
+  let authenticated = false;
 
   const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
@@ -72,7 +54,11 @@
     const meta = document.createElement('div');
     const author = document.createElement('div');
     author.className = 'salon__author';
-    author.textContent = comment.displayName || '会员';
+    author.textContent = comment.displayName || '游客';
+    const badge = document.createElement('span');
+    badge.className = 'salon__badge';
+    badge.textContent = comment.authorKind === 'member' ? '会员' : '游客';
+    author.append(badge);
     const time = document.createElement('time');
     time.className = 'salon__time';
     time.dateTime = new Date(comment.createdAt * 1000).toISOString();
@@ -104,6 +90,12 @@
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const content = textarea.value.trim();
+    const displayName = nameInput.value.trim();
+    if (!authenticated && (displayName.length < 2 || displayName.length > 30)) {
+      status.textContent = '请填写 2—30 个字符的游客昵称。';
+      nameInput.focus();
+      return;
+    }
     if (content.length < 2) {
       status.textContent = '请至少写下 2 个字符。';
       return;
@@ -115,7 +107,7 @@
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ content, displayName, website: website.value })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || '暂时无法发表评论。');
@@ -124,7 +116,7 @@
       list.append(commentElement(data.comment));
       textarea.value = '';
       counter.textContent = '0 / 800';
-      status.textContent = '回应已发表。';
+      status.textContent = '回应已发表，将在每日 GitHub 备份中存档。';
     } catch (error) {
       status.textContent = error.message || '暂时无法发表评论。';
     } finally {
@@ -132,22 +124,30 @@
     }
   });
 
-  Promise.all([
-    fetch(endpoint, { credentials: 'same-origin' }),
-    fetch('/api/auth/session', { credentials: 'same-origin' })
-  ]).then(async ([commentsResponse, sessionResponse]) => {
-    if (!commentsResponse.ok) throw new Error('暂时无法载入评论。');
-    const commentsData = await commentsResponse.json();
-    renderComments(commentsData.comments || []);
-    status.textContent = `${(commentsData.comments || []).length} 条回应`;
+  fetch(endpoint, { credentials: 'same-origin' })
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || '暂时无法载入评论。');
+      renderComments(data.comments || []);
+      status.textContent = `${(data.comments || []).length} 条回应 · 每日备份至 GitHub`;
+    })
+    .catch(error => {
+      renderComments([]);
+      status.textContent = error.message || '暂时无法载入评论。';
+    });
 
-    const sessionData = sessionResponse.ok ? await sessionResponse.json() : { authenticated: false };
-    const canComment = sessionData.authenticated && ['member', 'admin'].includes(sessionData.user?.role);
-    form.hidden = !canComment;
-    access.hidden = canComment;
-    if (canComment) identity.textContent = `以 ${sessionData.user.displayName} 的身份参加沙龙。`;
-  }).catch(error => {
-    status.textContent = error.message || '暂时无法载入评论。';
-    access.hidden = false;
-  });
+  fetch('/api/auth/session', { credentials: 'same-origin' })
+    .then(response => response.ok ? response.json() : { authenticated: false })
+    .then(session => {
+      authenticated = Boolean(session.authenticated && ['member', 'admin'].includes(session.user?.role));
+      guestFields.hidden = authenticated;
+      nameInput.required = !authenticated;
+      identity.hidden = !authenticated;
+      if (authenticated) identity.textContent = `以 ${session.user.displayName} 的会员身份参加沙龙。`;
+    })
+    .catch(() => {
+      authenticated = false;
+      guestFields.hidden = false;
+      nameInput.required = true;
+    });
 })();

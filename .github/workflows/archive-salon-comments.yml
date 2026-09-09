@@ -1,0 +1,32 @@
+name: Archive public salon comments
+
+on:
+  schedule:
+    - cron: '25 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download public comments
+        run: node scripts/archive-comments.mjs
+
+      - name: Commit changed archive
+        shell: bash
+        run: |
+          if git diff --quiet -- data/comments; then
+            echo "No salon changes to archive."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- data/comments
+          git commit -m "Archive public salon comments"
+          git push
