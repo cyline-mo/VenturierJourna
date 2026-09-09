@@ -1,0 +1,24 @@
+.salon{border-top:1px solid var(--line);background:color-mix(in srgb,var(--paper) 94%,var(--moss) 6%)}
+.salon__inner{width:min(calc(100% - 3rem),820px);margin:auto;padding:clamp(4rem,8vw,7rem) 0}
+.salon__eyebrow{color:var(--accent);font:650 .62rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.salon h2{margin:.9rem 0 .8rem;font:400 clamp(2.5rem,6vw,4.6rem)/1 var(--display);letter-spacing:-.045em}
+.salon__intro{max-width:680px;margin:0;color:var(--muted);font-size:.9rem}
+.salon__composer{margin-top:2rem;padding:1.2rem;border:1px solid var(--line);background:var(--paper)}
+.salon__identity{margin:0 0 1rem;color:var(--muted);font-size:.76rem}
+.salon__guest-fields{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:.8rem;margin-bottom:1rem}
+.salon__field{display:grid;gap:.55rem}.salon__guest-note{padding-bottom:.72rem;color:var(--muted);font-size:.7rem;white-space:nowrap}
+.salon input,.salon textarea{display:block;width:100%;border:1px solid var(--line);padding:.8rem 1rem;background:transparent;color:var(--ink);font:inherit}
+.salon textarea{min-height:120px;resize:vertical;line-height:1.7}
+.salon input:focus,.salon textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px}
+.salon__trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+.salon__actions{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.8rem}
+.salon__count{color:var(--muted);font:600 .62rem/1 var(--mono)}
+.salon__submit{border:0;border-radius:999px;padding:.78rem 1.2rem;background:var(--ink);color:var(--paper);font-weight:700;cursor:pointer}
+.salon__submit:disabled{opacity:.55;cursor:wait}.salon__status{min-height:1.4em;margin:1rem 0 0;color:var(--muted);font-size:.76rem}
+.salon__list{margin-top:2.2rem;border-top:1px solid var(--line)}
+.salon__comment{display:grid;grid-template-columns:145px minmax(0,1fr);gap:1.2rem;padding:1.35rem 0;border-bottom:1px solid var(--line)}
+.salon__author{font-weight:750}.salon__badge{display:inline-block;margin-left:.45rem;color:var(--moss);font:650 .52rem/1 var(--mono);letter-spacing:.06em}
+.salon__time{display:block;margin-top:.25rem;color:var(--muted);font:500 .58rem/1.4 var(--mono)}
+.salon__body{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--display);font-size:1.04rem;line-height:1.8}
+.salon__empty{padding:2rem 0;color:var(--muted);font-size:.85rem}
+@media(max-width:620px){.salon__inner{width:min(calc(100% - 2rem),820px)}.salon__guest-fields,.salon__comment{grid-template-columns:1fr}.salon__guest-note{padding:0}.salon__comment{gap:.65rem}.salon__actions{align-items:flex-end}}

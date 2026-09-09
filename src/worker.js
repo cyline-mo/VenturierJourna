@@ -11,7 +11,8 @@ const ARTICLES = Object.freeze({
   'july-2026-financial-data': '2026年7月金融数据：社融没有塌，私人信用需求正在退潮',
   'money-in-the-bank-consumption-defense': '2026年7月消费数据分析',
   'hidden-hunger-in-a-depression': '萧条中的隐性饥饿',
-  'modern-sang-hongyang-question': '现代桑弘羊之问'
+  'modern-sang-hongyang-question': '现代桑弘羊之问',
+  'will-the-border-close-after-september-15': '9月15日以后，国门会不会关闭'
 });
 const PUBLIC_PORTFOLIO = Object.freeze({
   snapshotAt: '2026-08-19',
@@ -172,16 +173,23 @@ async function listArticleComments(articleSlug, env) {
   if (!Object.hasOwn(ARTICLES, articleSlug)) throw new HttpError(404, '文章不存在。');
   await ensureCommentsSchema(env.DB);
   const result = await env.DB.prepare(`
-    SELECT c.id, c.body, c.created_at, u.display_name
-    FROM article_comments c
-    JOIN users u ON u.id = c.user_id
-    WHERE c.article_slug = ?1 AND c.status = 'visible' AND u.status = 'active'
-    ORDER BY c.created_at DESC, c.id DESC
+    SELECT id, body, created_at, display_name, author_kind FROM (
+      SELECT c.id, c.body, c.created_at, u.display_name, 'member' AS author_kind
+      FROM article_comments c
+      JOIN users u ON u.id = c.user_id
+      WHERE c.article_slug = ?1 AND c.status = 'visible' AND u.status = 'active'
+      UNION ALL
+      SELECT g.id, g.body, g.created_at, g.display_name, 'guest' AS author_kind
+      FROM guest_article_comments g
+      WHERE g.article_slug = ?1 AND g.status = 'visible'
+    )
+    ORDER BY created_at DESC, id DESC
     LIMIT 100
   `).bind(articleSlug).all();
   const comments = (result.results || []).reverse().map(row => ({
     id: row.id,
     displayName: row.display_name,
+    authorKind: row.author_kind,
     content: row.body,
     createdAt: Number(row.created_at)
   }));
@@ -190,28 +198,66 @@ async function listArticleComments(articleSlug, env) {
 
 async function createArticleComment(articleSlug, request, env) {
   if (!Object.hasOwn(ARTICLES, articleSlug)) throw new HttpError(404, '文章不存在。');
-  const user = await requireMemberSession(request, env);
   const body = await readJson(request);
   const content = String(body.content || '').replace(/\r\n/g, '\n').trim();
   if (content.length < 2) throw new HttpError(400, '评论至少需要 2 个字符。');
   if (content.length > 800) throw new HttpError(400, '评论不能超过 800 个字符。');
 
   await ensureCommentsSchema(env.DB);
-  if (!(await consumeRateLimit(env.DB, `comment:${user.id}`, 5, 60))) {
-    throw new HttpError(429, '发言太频繁，请一分钟后再试。');
-  }
-
+  const user = await optionalMemberSession(request, env);
   const id = crypto.randomUUID();
   const createdAt = unixTime();
-  await env.DB.prepare(`
-    INSERT INTO article_comments (id, article_slug, user_id, body, status, created_at, updated_at)
-    VALUES (?1, ?2, ?3, ?4, 'visible', ?5, ?5)
-  `).bind(id, articleSlug, user.id, content, createdAt).run();
+  let displayName;
+  let authorKind;
+
+  if (user) {
+    if (!(await consumeRateLimit(env.DB, `comment:${user.id}`, 5, 60))) {
+      throw new HttpError(429, '发言太频繁，请一分钟后再试。');
+    }
+    displayName = user.display_name;
+    authorKind = 'member';
+    await env.DB.prepare(`
+      INSERT INTO article_comments (id, article_slug, user_id, body, status, created_at, updated_at)
+      VALUES (?1, ?2, ?3, ?4, 'visible', ?5, ?5)
+    `).bind(id, articleSlug, user.id, content, createdAt).run();
+  } else {
+    displayName = String(body.displayName || '').replace(/\s+/g, ' ').trim();
+    if (displayName.length < 2 || displayName.length > 30) {
+      throw new HttpError(400, '游客昵称需要填写 2—30 个字符。');
+    }
+    if (String(body.website || '').trim()) {
+      return json({ ok: true, comment: { id, displayName, authorKind: 'guest', content, createdAt } }, 201);
+    }
+    const pepper = requirePasswordPepper(env);
+    const ipAddress = String(request.headers.get('CF-Connecting-IP') || 'unknown');
+    const visitorHash = await sha256Hex(`guest-comment-v1\u0000${pepper}\u0000${ipAddress}`);
+    if (!(await consumeRateLimit(env.DB, `guest-comment:${visitorHash}`, 5, 10 * 60))) {
+      throw new HttpError(429, '游客发言较频繁，请十分钟后再试。');
+    }
+    authorKind = 'guest';
+    await env.DB.prepare(`
+      INSERT INTO guest_article_comments (id, article_slug, display_name, body, status, created_at, updated_at)
+      VALUES (?1, ?2, ?3, ?4, 'visible', ?5, ?5)
+    `).bind(id, articleSlug, displayName, content, createdAt).run();
+  }
 
   return json({
     ok: true,
-    comment: { id, displayName: user.display_name, content, createdAt }
+    comment: { id, displayName, authorKind, content, createdAt }
   }, 201);
+}
+
+async function optionalMemberSession(request, env) {
+  const token = parseCookies(request.headers.get('Cookie') || '')[SESSION_COOKIE];
+  if (!token) return null;
+  const tokenHash = await sha256Hex(token);
+  const user = await env.DB.prepare(`
+    SELECT u.id, u.display_name, u.role, u.status
+    FROM sessions s JOIN users u ON u.id = s.user_id
+    WHERE s.token_hash = ?1 AND s.expires_at > ?2
+  `).bind(tokenHash, unixTime()).first();
+  if (!user || user.status !== 'active' || !['member', 'admin'].includes(user.role)) return null;
+  return user;
 }
 
 async function requireAdminSession(request, env) {
@@ -288,7 +334,19 @@ async function ensureCommentsSchema(db) {
         ) STRICT
       `),
       db.prepare('CREATE INDEX IF NOT EXISTS article_comments_slug_time_idx ON article_comments(article_slug, created_at)'),
-      db.prepare('CREATE INDEX IF NOT EXISTS article_comments_user_idx ON article_comments(user_id)')
+      db.prepare('CREATE INDEX IF NOT EXISTS article_comments_user_idx ON article_comments(user_id)'),
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS guest_article_comments (
+          id TEXT PRIMARY KEY,
+          article_slug TEXT NOT NULL,
+          display_name TEXT NOT NULL CHECK (length(display_name) BETWEEN 2 AND 30),
+          body TEXT NOT NULL CHECK (length(body) BETWEEN 2 AND 800),
+          status TEXT NOT NULL DEFAULT 'visible' CHECK (status IN ('visible', 'hidden')),
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        ) STRICT
+      `),
+      db.prepare('CREATE INDEX IF NOT EXISTS guest_article_comments_slug_time_idx ON guest_article_comments(article_slug, created_at)')
     ]).catch(error => {
       commentsSchemaReady = null;
       throw error;
